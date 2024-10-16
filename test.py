@@ -1,30 +1,19 @@
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
-import subprocess
-import requests  # Import requests to make the API call
-
+import requests
 
 class Pipeline:
+    class Valves(BaseModel):
+        pass
+
     def __init__(self):
-        self.name = "Python Code Pipeline"
-        # FastAPI endpoint URL
-        self.api_url = "http://127.0.0.1:8081/determine-task"
+        self.name = "Wikipedia Pipeline"
+        
+        self.api_url = "http://127.0.0.1:8081/determine-task"  # FastAPI endpoint for determining the task
 
     async def on_startup(self):
         print(f"on_startup:{__name__}")
     
     async def on_shutdown(self):
         print(f"on_shutdown:{__name__}")
-
-    def execute_python_code(self, code):
-        try:
-            result = subprocess.run(
-                ["python", "-c", code], capture_output=True, text=True, check=True
-            )
-            stdout = result.stdout.strip()
-            return stdout, result.returncode
-        except subprocess.CalledProcessError as e:
-            return e.output.strip(), e.returncode
 
     def determine_task(self, user_input: str) -> str:
         # Define the input data for the API call
@@ -51,12 +40,4 @@ class Pipeline:
         task = self.determine_task(user_message)
         print("Task determined:", task)
 
-        if task == "code_generation":
-            
-            return "preforming code generation"
-        elif task == "compliance_check":
-            return "Performing compliance check (not implemented)"
-        elif task == "code_edit":
-            return "Performing code edit (not implemented)"
-        else:
-            return task
+        return task
