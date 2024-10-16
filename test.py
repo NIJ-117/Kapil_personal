@@ -59,4 +59,4 @@ class Pipeline:
         elif task == "code_edit":
             return "Performing code edit (not implemented)"
         else:
-            return "Task type is unknown or unsupported."
+            return task
