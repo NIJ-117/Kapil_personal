@@ -15,7 +15,7 @@ class Pipeline:
         # The identifier must be unique across all pipelines.
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
         # self.id = "wiki_pipeline"
-        self.name = "llama_fact"
+        self.name = "llama_code_agent"
 
         # Initialize rate limits
         self.valves = self.Valves(**{"OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "")})
@@ -38,7 +38,7 @@ class Pipeline:
 
         if body.get("title", False):
             print("Title Generation")
-            return "llama_fact"
+            return "llama_code_agent"
         else:
             titles = []
             for query in [user_message]:
@@ -47,7 +47,7 @@ class Pipeline:
                 
 
                 # Define the URL of the FastAPI server
-                url = "http://10.35.151.101:8082/translate"  # Update the port if needed
+                url = "http://10.35.151.101:8082/code"  # Update the port if needed
 
                 # Define the data to send in the POST request
                 data = {
@@ -60,8 +60,8 @@ class Pipeline:
                 # Check if the request was successful
                 if response.status_code == 200:
                     # Print the translated text from the response
-                    translated_text = response.json().get("translated_text")
-                    print("Translated Text:", translated_text)
+                    translated_text = response.json().get("Final_code_generated")
+                    # print("Translated Text:", translated_text)
                     return translated_text
                 else:
                     # Print an error message if the request failed
