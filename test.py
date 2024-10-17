@@ -1,43 +1,64 @@
+from typing import List, Union, Generator, Iterator
+from schemas import OpenAIChatMessage
+import subprocess
 import requests
 
 class Pipeline:
-    class Valves(BaseModel):
+    def __init__(self):
+        # Optionally, you can set the id and name of the pipeline.
+        # Best practice is to not specify the id so that it can be automatically inferred from the filename, so that users can install multiple versions of the same pipeline.
+        # The identifier must be unique across all pipelines.
+        # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
+        # self.id = "python_code_pipeline"
+        self.name = "Python Code Pipeline"
         pass
 
-    def __init__(self):
-        self.name = "Wikipedia Pipeline"
-        
-        self.api_url = "http://127.0.0.1:8081/determine-task"  # FastAPI endpoint for determining the task
-
     async def on_startup(self):
+        # This function is called when the server is started.
         print(f"on_startup:{__name__}")
-    
-    async def on_shutdown(self):
-        print(f"on_shutdown:{__name__}")
+        pass
 
-    def determine_task(self, user_input: str) -> str:
-        # Define the input data for the API call
-        data = {"user_input": user_input}
-        
-        # Send the POST request to the FastAPI endpoint
+    async def on_shutdown(self):
+        # This function is called when the server is stopped.
+        print(f"on_shutdown:{__name__}")
+        pass
+
+    def execute_python_code(self, code):
         try:
-            response = requests.post(self.api_url, json=data)
-            response.raise_for_status()  # Raise an error for unsuccessful status codes
-            result = response.json()
-            return result["task"]  # Extract the task from the response
-        except requests.RequestException as e:
-            print("Failed to call API:", e)
-            return "unknown"  # Default to "unknown" in case of an error
+            result = subprocess.run(
+                ["python", "-c", code], capture_output=True, text=True, check=True
+            )
+            stdout = result.stdout.strip()
+            return stdout, result.returncode
+        except subprocess.CalledProcessError as e:
+            return e.output.strip(), e.returncode
 
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
+        # This is where you can add your custom pipelines like RAG.
         print(f"pipe:{__name__}")
-        print(messages)
-        print(user_message)
 
-        # Determine the task using the API call
-        task = self.determine_task(user_message)
-        print("Task determined:", task)
+        
 
-        return task
+        url = "http://127.0.0.1:8082/translate"  # Update the port if needed
+
+        # Define the data to send in the POST request
+        data = {
+            "user_input": "Hello, how are you?"
+        }
+
+        # Send the POST request
+        response = requests.post(url, json=data)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Print the translated text from the response
+            translated_text = response.json().get("translated_text")
+            return translated_text
+        else:
+            # Print an error message if the request failed
+            return(f"Failed to get a response: {response.status_code}")
+            
+
+        
