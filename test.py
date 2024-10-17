@@ -15,7 +15,7 @@ class Pipeline:
         # The identifier must be unique across all pipelines.
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
         # self.id = "wiki_pipeline"
-        self.name = "Wikipedia Pipeline"
+        self.name = "llama_fact"
 
         # Initialize rate limits
         self.valves = self.Valves(**{"OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "")})
@@ -38,32 +38,33 @@ class Pipeline:
 
         if body.get("title", False):
             print("Title Generation")
-            return "Wikipedia Pipeline"
+            return "llama_fact"
         else:
             titles = []
             for query in [user_message]:
                 query = query.replace(" ", "_")
 
-                r = requests.get(
-                    f"https://en.wikipedia.org/w/api.php?action=opensearch&search={query}&limit=1&namespace=0&format=json"
-                )
+                
 
-                response = r.json()
-                titles = titles + response[1]
-                print(titles)
+                # Define the URL of the FastAPI server
+                url = "http://127.0.0.1:8082/translate"  # Update the port if needed
 
-            context = None
-            if len(titles) > 0:
-                r = requests.get(
-                    f"https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles={'|'.join(titles)}"
-                )
-                response = r.json()
-                # get extracts
-                pages = response["query"]["pages"]
-                for page in pages:
-                    if context == None:
-                        context = pages[page]["extract"] + "\n"
-                    else:
-                        context = context + pages[page]["extract"] + "\n"
+                # Define the data to send in the POST request
+                data = {
+                    "user_input": query
+                }
 
-            return context if context else "No information found"
+                # Send the POST request
+                response = requests.post(url, json=data)
+
+                # Check if the request was successful
+                if response.status_code == 200:
+                    # Print the translated text from the response
+                    translated_text = response.json().get("translated_text")
+                    print("Translated Text:", translated_text)
+                    return translated_text
+                else:
+                    # Print an error message if the request failed
+                    print(f"Failed to get a response: {response.status_code}")
+                    print(response.text)
+                    return "not able generate"
