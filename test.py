@@ -1,17 +1,24 @@
 from typing import List, Union, Generator, Iterator
+from pydantic import BaseModel
 from schemas import OpenAIChatMessage
-import subprocess
 import requests
+import os
+
 
 class Pipeline:
+    class Valves(BaseModel):
+        pass
+
     def __init__(self):
         # Optionally, you can set the id and name of the pipeline.
         # Best practice is to not specify the id so that it can be automatically inferred from the filename, so that users can install multiple versions of the same pipeline.
         # The identifier must be unique across all pipelines.
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
-        # self.id = "python_code_pipeline"
-        self.name = "Python Code Pipeline"
-        pass
+        # self.id = "wiki_pipeline"
+        self.name = "Wikipedia Pipeline"
+
+        # Initialize rate limits
+        self.valves = self.Valves(**{"OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "")})
 
     async def on_startup(self):
         # This function is called when the server is started.
@@ -23,42 +30,40 @@ class Pipeline:
         print(f"on_shutdown:{__name__}")
         pass
 
-    def execute_python_code(self, code):
-        try:
-            result = subprocess.run(
-                ["python", "-c", code], capture_output=True, text=True, check=True
-            )
-            stdout = result.stdout.strip()
-            return stdout, result.returncode
-        except subprocess.CalledProcessError as e:
-            return e.output.strip(), e.returncode
-
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
         # This is where you can add your custom pipelines like RAG.
         print(f"pipe:{__name__}")
 
-        
-
-        url = "http://127.0.0.1:8082/translate"  # Update the port if needed
-
-        # Define the data to send in the POST request
-        data = {
-            "user_input": "Hello, how are you?"
-        }
-
-        # Send the POST request
-        response = requests.post(url, json=data)
-
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Print the translated text from the response
-            translated_text = response.json().get("translated_text")
-            return translated_text
+        if body.get("title", False):
+            print("Title Generation")
+            return "Wikipedia Pipeline"
         else:
-            # Print an error message if the request failed
-            return(f"Failed to get a response: {response.status_code}")
-            
+            titles = []
+            for query in [user_message]:
+                query = query.replace(" ", "_")
 
-        
+                r = requests.get(
+                    f"https://en.wikipedia.org/w/api.php?action=opensearch&search={query}&limit=1&namespace=0&format=json"
+                )
+
+                response = r.json()
+                titles = titles + response[1]
+                print(titles)
+
+            context = None
+            if len(titles) > 0:
+                r = requests.get(
+                    f"https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles={'|'.join(titles)}"
+                )
+                response = r.json()
+                # get extracts
+                pages = response["query"]["pages"]
+                for page in pages:
+                    if context == None:
+                        context = pages[page]["extract"] + "\n"
+                    else:
+                        context = context + pages[page]["extract"] + "\n"
+
+            return context if context else "No information found"
