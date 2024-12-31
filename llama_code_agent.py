@@ -47,7 +47,7 @@ class Pipeline:
                 
 
                 # Define the URL of the FastAPI server
-                url = "http://10.35.151.101:8083/code"  # Update the port if needed
+                url = "http://localhost:8083/code"  # Update the port if needed
 
                 # Define the data to send in the POST request
                 data = {
